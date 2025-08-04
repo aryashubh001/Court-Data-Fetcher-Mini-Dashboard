@@ -1,55 +1,19 @@
 // A single-file Node.js/Express.js application that serves both the frontend
 // and handles the backend API calls.
-// This is the most straightforward way to run the entire application locally
-// and avoid cross-origin resource sharing (CORS) issues.
+// This version uses Playwright to simulate web scraping instead of mock data.
 // To run this file, you will need Node.js installed.
 // First, initialize a Node.js project: `npm init -y`
-// Then, install the required packages: `npm install express`
+// Then, install the required packages: `npm install express playwright`
 // You do not need 'cors' because the frontend is served from the same server.
 
 const express = require('express');
+const { chromium } = require('playwright');
+const path = require('path');
 const app = express();
 const port = 3000;
 
 // Middleware to parse JSON bodies
 app.use(express.json());
-
-// --- DATA SIMULATION (REPLACING WEBSCRAPING LOGIC) ---
-// This object simulates the data that would be scraped from the court website.
-const MOCK_DATA = {
-    'criminal-123-2023': {
-        caseType: 'Criminal Case',
-        caseNumber: '123',
-        filingYear: '2023',
-        parties: 'State of Delhi vs. John Doe',
-        filingDate: '2023-01-15',
-        nextHearingDate: '2025-09-01',
-        orders: [
-            {
-                date: '2024-07-28',
-                description: 'Final order on bail application.',
-                pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+Order+PDF'
-            },
-        ],
-        rawResponse: '<html><body>...raw HTML content from a criminal case...</body></html>'
-    },
-    'civil-456-2024': {
-        caseType: 'Civil Suit',
-        caseNumber: '456',
-        filingYear: '2024',
-        parties: 'Jane Doe vs. ABC Corp',
-        filingDate: '2024-03-20',
-        nextHearingDate: '2025-10-15',
-        orders: [
-            {
-                date: '2024-08-01',
-                description: 'Case listed for final arguments.',
-                pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+Order+PDF'
-            }
-        ],
-        rawResponse: '<html><body>...raw HTML content from a civil suit...</body></html>'
-    }
-};
 
 // --- DATABASE SIMULATION (REPLACING MYSQL LOGIC) ---
 const queryLog = [];
@@ -70,36 +34,129 @@ function logQueryToDb(query, response) {
     console.log('Query logged to simulated database:', logEntry);
 }
 
-// --- API ROUTES ---
+// --- WEB SCRAPING LOGIC ---
+/**
+ * Simulates a real web scraper using Playwright.
+ * In a real-world scenario, this would navigate to a court website
+ * and extract the relevant data. For this example, it scrapes a
+ * hardcoded HTML string to demonstrate the process.
+ * @param {object} query The user's search query.
+ * @returns {Promise<object|null>} A promise that resolves to the scraped data or null if not found.
+ */
+async function scrapeCaseData(query) {
+    const { caseType, caseNumber, filingYear } = query;
 
-// Endpoint to handle case data requests
-app.post('/api/case', (req, res) => {
+    // A mock HTML page content that a scraper would retrieve
+    const mockHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head><title>Case Details</title></head>
+    <body>
+        <h1>Case Details for ${caseType} No. ${caseNumber}/${filingYear}</h1>
+        <p class="parties">Parties: State of Delhi vs. John Doe</p>
+        <p class="filing-date">Filing Date: 2023-01-15</p>
+        <p class="next-hearing">Next Hearing Date: 2025-09-01</p>
+        <div class="orders">
+            <h2>Orders and Judgments</h2>
+            <ul>
+                <li>
+                    <span>Date: 2024-07-28</span>
+                    <a href="https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+Order+PDF" class="pdf-link">Final order on bail application.</a>
+                </li>
+            </ul>
+        </div>
+        <p id="not-found" style="display: none;">Case not found.</p>
+    </body>
+    </html>
+    `;
+    
+    // A mock HTML page for a non-existent case
+    const notFoundHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head><title>Case Not Found</title></head>
+    <body>
+        <h1 id="not-found">No such case exists.</h1>
+    </body>
+    </html>
+    `;
+
+    // Simulate different responses based on the query
+    const content = (caseNumber === '123' && caseType === 'criminal' && filingYear === '2023') ? mockHtml : notFoundHtml;
+
+    // Use Playwright to "scrape" the HTML
+    const browser = await chromium.launch();
+    const page = await browser.newPage();
+    
+    // Use setContent to load the mock HTML string into the page
+    await page.setContent(content);
+
+    let result = null;
+
+    // Check for a "not found" message
+    if (await page.$('#not-found')) {
+        await browser.close();
+        return null;
+    }
+
+    try {
+        // Extract the data using CSS selectors
+        const parties = await page.textContent('.parties');
+        const filingDate = await page.textContent('.filing-date');
+        const nextHearingDate = await page.textContent('.next-hearing');
+        const orderElement = await page.$('.orders a.pdf-link');
+        
+        const orders = [];
+        if (orderElement) {
+            orders.push({
+                date: (await page.textContent('.orders span')).replace('Date: ', ''),
+                description: await orderElement.textContent(),
+                pdfLink: await orderElement.getAttribute('href')
+            });
+        }
+        
+        result = {
+            caseType,
+            caseNumber,
+            filingYear,
+            parties: parties.replace('Parties: ', ''),
+            filingDate: filingDate.replace('Filing Date: ', ''),
+            nextHearingDate: nextHearingDate.replace('Next Hearing Date: ', ''),
+            orders,
+            rawResponse: content // Simulate the raw HTML response
+        };
+
+    } catch (error) {
+        console.error('Scraping error:', error);
+    } finally {
+        await browser.close();
+    }
+
+    return result;
+}
+
+// --- API ROUTES ---
+app.post('/api/case', async (req, res) => {
     console.log('Received API request:', req.body);
     const { caseType, caseNumber, filingYear } = req.body;
 
-    setTimeout(() => {
-        const key = `${caseType}-${caseNumber}-${filingYear}`;
-        const caseData = MOCK_DATA[key];
+    const caseData = await scrapeCaseData({ caseType, caseNumber, filingYear });
 
-        if (caseData) {
-            logQueryToDb(req.body, caseData);
-            res.status(200).json({ success: true, data: caseData });
-        } else {
-            const errorResponse = { message: 'No case found for the given details.' };
-            logQueryToDb(req.body, errorResponse);
-            res.status(404).json({ success: false, message: 'No case found with these details.' });
-        }
-    }, 1000);
+    if (caseData) {
+        logQueryToDb(req.body, caseData);
+        res.status(200).json({ success: true, data: caseData });
+    } else {
+        const errorResponse = { message: 'No case found for the given details.' };
+        logQueryToDb(req.body, errorResponse);
+        res.status(404).json({ success: false, message: 'No case found with these details.' });
+    }
 });
 
-// Endpoint to retrieve the query log from the simulated database
 app.get('/api/log', (req, res) => {
     res.status(200).json(queryLog);
 });
 
 // --- FRONTEND ROUTE ---
-// This serves the HTML page. All requests to the root URL will receive this file.
-// In a real project, this would be a separate HTML file served from the 'public' directory.
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -108,10 +165,8 @@ app.get('/', (req, res) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Court-Data Fetcher & Mini-Dashboard</title>
-    <!-- Use Tailwind CSS for a clean and responsive design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for a better look and feel */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
@@ -142,7 +197,6 @@ app.get('/', (req, res) => {
         <div class="card mb-8">
             <h2 class="text-2xl font-semibold mb-6 text-gray-700">Fetch Case Details</h2>
             <form id="search-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Case Type Dropdown -->
                 <div>
                     <label for="case-type" class="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
                     <select id="case-type" name="case-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
@@ -151,17 +205,14 @@ app.get('/', (req, res) => {
                         <option value="writ">Writ Petition</option>
                     </select>
                 </div>
-                <!-- Case Number Input -->
                 <div>
                     <label for="case-number" class="block text-sm font-medium text-gray-700 mb-1">Case Number</label>
                     <input type="text" id="case-number" name="case-number" placeholder="e.g., 123" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
                 </div>
-                <!-- Filing Year Dropdown -->
                 <div>
                     <label for="filing-year" class="block text-sm font-medium text-gray-700 mb-1">Filing Year</label>
                     <select id="filing-year" name="filing-year" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
                         <script>
-                            // Dynamically populate the year dropdown
                             const currentYear = new Date().getFullYear();
                             for (let i = currentYear; i >= 2000; i--) {
                                 document.write(\`<option value="\${i}">\${i}</option>\`);
@@ -169,7 +220,6 @@ app.get('/', (req, res) => {
                         </script>
                     </select>
                 </div>
-                <!-- Submit Button -->
                 <div class="md:col-span-3 text-center">
                     <button type="submit" class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300">
                         Fetch Data
@@ -198,7 +248,6 @@ app.get('/', (req, res) => {
     </div>
 
     <script>
-        // --- DOM ELEMENTS ---
         const searchForm = document.getElementById('search-form');
         const caseTypeSelect = document.getElementById('case-type');
         const caseNumberInput = document.getElementById('case-number');
@@ -208,13 +257,11 @@ app.get('/', (req, res) => {
         const errorMessage = document.getElementById('error-message');
         const logList = document.getElementById('log-list');
 
-        // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', () => {
             fetchQueryLog();
             searchForm.addEventListener('submit', handleFormSubmit);
         });
 
-        // --- FUNCTIONS ---
         async function handleFormSubmit(event) {
             event.preventDefault();
             const query = {
@@ -222,11 +269,9 @@ app.get('/', (req, res) => {
                 caseNumber: caseNumberInput.value.trim(),
                 filingYear: filingYearSelect.value
             };
-
             resultContent.innerHTML = \`<p class="text-center text-gray-500">Fetching data...</p>\`;
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
-
             try {
                 const response = await fetch('/api/case', {
                     method: 'POST',
