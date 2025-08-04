@@ -273,7 +273,8 @@ app.get('/', (req, res) => {
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             try {
-                const response = await fetch('/api/case', {
+                // REPLACE THIS URL with your live Vercel URL
+                const response = await fetch('https://your-backend-app-url.vercel.app/api/case', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(query)
@@ -293,7 +294,8 @@ app.get('/', (req, res) => {
 
         async function fetchQueryLog() {
             try {
-                const response = await fetch('/api/log');
+                // REPLACE THIS URL with your live Vercel URL
+                const response = await fetch('https://your-backend-app-url.vercel.app/api/log');
                 const logs = await response.json();
                 renderQueryLog(logs);
             } catch (error) {
