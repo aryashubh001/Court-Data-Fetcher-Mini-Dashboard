@@ -3,163 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Court Case Search</title>
+    <title>Court-Data Fetcher & Mini-Dashboard</title>
+    <!-- Use Tailwind CSS for a clean and responsive design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        /* Custom styles for a better look and feel */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl transform transition-all duration-300">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Delhi High Court Case Search</h1>
-        <form id="search-form" class="space-y-6">
-            <div>
-                <label for="case_type" class="block text-sm font-medium text-gray-700">Case Type</label>
-                <select id="case_type" name="case_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 transition-colors duration-200">
-                    <option value=""></option>
-                    <option value="ARB.P.">ARB.P.</option>
-                    <option value="BAIL APPLN.">BAIL APPLN.</option>
-                    <option value="CCP(O)">CCP(O)</option>
-                    <option value="CM(M)">CM(M)</option>
-                    <option value="CRIMINAL APPEAL">CRIMINAL APPEAL</option>
-                    <option value="CS (OS)">CS (OS)</option>
-                    <option value="W.P.(C)">W.P.(C)</option>
-                </select>
-            </div>
-            <div>
-                <label for="case_number" class="block text-sm font-medium text-gray-700">Case Number</label>
-                <input type="number" id="case_number" name="case_number" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 transition-colors duration-200" placeholder="e.g., 1234">
-            </div>
-            <div>
-                <label for="filing_year" class="block text-sm font-medium text-gray-700">Filing Year</label>
-                <input type="number" id="filing_year" name="filing_year" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 transition-colors duration-200" placeholder="e.g., 2023">
-            </div>
-            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                <span id="button-text">Search Case</span>
-                <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </button>
-        </form>
+<body class="bg-gray-100">
 
-        <!-- Message Box -->
-        <div id="message-box" class="hidden mt-6 p-4 rounded-md border text-sm" role="alert">
-            <p id="message-text" class="font-medium"></p>
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="4xl:text-5xl font-bold text-gray-800">Court Case Dashboard</h1>
+            <p class="text-lg text-gray-600 mt-2">Find and view case details from a simulated eCourts portal.</p>
+        </header>
+
+        <!-- Main Form Section -->
+        <div class="card mb-8">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Fetch Case Details</h2>
+            <form id="search-form" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Case Type Dropdown -->
+                <div>
+                    <label for="case-type" class="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
+                    <select id="case-type" name="case-type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                        <option value="criminal">Criminal Case</option>
+                        <option value="civil">Civil Suit</option>
+                        <option value="writ">Writ Petition</option>
+                    </select>
+                </div>
+                <!-- Case Number Input -->
+                <div>
+                    <label for="case-number" class="block text-sm font-medium text-gray-700 mb-1">Case Number</label>
+                    <input type="text" id="case-number" name="case-number" placeholder="e.g., 123" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                </div>
+                <!-- Filing Year Dropdown -->
+                <div>
+                    <label for="filing-year" class="block text-sm font-medium text-gray-700 mb-1">Filing Year</label>
+                    <select id="filing-year" name="filing-year" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                        <script>
+                            // Dynamically populate the year dropdown
+                            const currentYear = new Date().getFullYear();
+                            for (let i = currentYear; i >= 2000; i--) {
+                                document.write(`<option value="${i}">${i}</option>`);
+                            }
+                        </script>
+                    </select>
+                </div>
+                <!-- Submit Button -->
+                <div class="md:col-span-3 text-center">
+                    <button type="submit" class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300">
+                        Fetch Data
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Results Display -->
-        <div id="results-container" class="hidden mt-8 space-y-6">
-            <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Case Details</h2>
-            <div id="case-details" class="space-y-2"></div>
-            
-            <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Latest Order</h2>
-            <div id="latest-order" class="space-y-2"></div>
+        <!-- Result Display Section -->
+        <div id="result-section" class="card mb-8 hidden">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Case Details</h2>
+            <div id="result-content">
+                <!-- Case details will be dynamically injected here -->
+            </div>
+            <div id="error-message" class="text-red-500 font-semibold hidden mt-4"></div>
         </div>
+
+        <!-- Query Log Section -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Query Log</h2>
+            <div id="log-list" class="space-y-4">
+                <!-- Query history will be dynamically injected here -->
+            </div>
+        </div>
+
     </div>
 
     <script>
-        const form = document.getElementById('search-form');
-        const resultsContainer = document.getElementById('results-container');
-        const caseDetailsDiv = document.getElementById('case-details');
-        const latestOrderDiv = document.getElementById('latest-order');
-        const messageBox = document.getElementById('message-box');
-        const messageText = document.getElementById('message-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const buttonText = document.getElementById('button-text');
+        // --- DOM ELEMENTS ---
+        const searchForm = document.getElementById('search-form');
+        const caseTypeSelect = document.getElementById('case-type');
+        const caseNumberInput = document.getElementById('case-number');
+        const filingYearSelect = document.getElementById('filing-year');
+        const resultSection = document.getElementById('result-section');
+        const resultContent = document.getElementById('result-content');
+        const errorMessage = document.getElementById('error-message');
+        const logList = document.getElementById('log-list');
 
-        function showMessage(text, type = 'error') {
-            messageText.textContent = text;
-            messageBox.classList.remove('hidden');
-            resultsContainer.classList.add('hidden');
-            if (type === 'error') {
-                messageBox.classList.remove('bg-green-100', 'border-green-400', 'text-green-700');
-                messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
-            } else {
-                messageBox.classList.remove('bg-red-100', 'border-red-400', 'text-red-700');
-                messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch and display the query log on page load
+            fetchQueryLog();
+
+            // Set up form submission handler
+            searchForm.addEventListener('submit', handleFormSubmit);
+        });
+
+        // --- FUNCTIONS ---
+        /**
+         * Handles the form submission event.
+         * @param {Event} event The form submission event.
+         */
+        async function handleFormSubmit(event) {
+            event.preventDefault(); // Prevent default form submission behavior
+
+            // Get user input values
+            const caseType = caseTypeSelect.value;
+            const caseNumber = caseNumberInput.value.trim();
+            const filingYear = filingYearSelect.value;
+
+            const query = { caseType, caseNumber, filingYear };
+            
+            // Show a loading indicator
+            resultContent.innerHTML = `<p class="text-center text-gray-500">Fetching data...</p>`;
+            resultSection.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+
+            try {
+                // Make a POST request to the backend API
+                // REPLACE THE URL BELOW WITH YOUR ACTUAL VERCEL BACKEND URL
+                const response = await fetch('https://your-backend-app-url.vercel.app/api/case', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(query)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Display the fetched data from the backend
+                    displayCaseData(result.data);
+                } else {
+                    // Display an error message from the backend
+                    displayErrorMessage(result.message);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                displayErrorMessage('Failed to connect to the backend server. Please make sure it is running.');
+            }
+
+            // Fetch and display the updated log after each query
+            fetchQueryLog();
+        }
+
+        /**
+         * Fetches the query log from the backend and renders it.
+         */
+        async function fetchQueryLog() {
+            try {
+                // REPLACE THE URL BELOW WITH YOUR ACTUAL VERCEL BACKEND URL
+                const response = await fetch('https://your-backend-app-url.vercel.app/api/log');
+                const logs = await response.json();
+                renderQueryLog(logs);
+            } catch (error) {
+                console.error('Error fetching log:', error);
+                logList.innerHTML = `<p class="text-center text-gray-500">Could not fetch query log from the server.</p>`;
             }
         }
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            // Hide previous results and messages
-            resultsContainer.classList.add('hidden');
-            messageBox.classList.add('hidden');
-
-            // Show loading state
-            loadingSpinner.classList.remove('hidden');
-            buttonText.textContent = 'Searching...';
-
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-
-            try {
-                const response = await fetch('/search', {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const result = await response.json();
-
-                if (response.ok) {
-                    displayResults(result);
-                } else {
-                    showMessage(result.error || 'An unknown error occurred.');
-                }
-            } catch (error) {
-                showMessage('An error occurred while connecting to the server. Please try again.');
-                console.error('Fetch error:', error);
-            } finally {
-                // Hide loading state
-                loadingSpinner.classList.add('hidden');
-                buttonText.textContent = 'Search Case';
-            }
-        });
-
-        function displayResults(data) {
-            caseDetailsDiv.innerHTML = '';
-            latestOrderDiv.innerHTML = '';
-
-            // Display case details
-            if (data.case_details) {
-                for (const [key, value] of Object.entries(data.case_details)) {
-                    caseDetailsDiv.innerHTML += `
-                        <div class="flex">
-                            <p class="font-semibold text-gray-600 min-w-[150px]">${key}:</p>
-                            <p class="text-gray-800">${value}</p>
+        /**
+         * Displays the fetched case data on the page.
+         * @param {object} data The case data to display.
+         */
+        function displayCaseData(data) {
+            let ordersHtml = `<p class="text-sm text-gray-600 mb-2">No recent orders or judgments found.</p>`;
+            if (data.orders && data.orders.length > 0) {
+                const mostRecentOrder = data.orders[0];
+                ordersHtml = `
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="text-sm text-gray-700"><span class="font-bold">Date:</span> ${mostRecentOrder.date}</p>
+                        <p class="text-sm text-gray-700"><span class="font-bold">Description:</span> ${mostRecentOrder.description}</p>
+                        <div class="mt-2">
+                            <a href="${mostRecentOrder.pdfLink}" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white font-medium rounded-md hover:bg-blue-600 transition-colors" download="Order_${mostRecentOrder.date}.pdf">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 11.586V3a1 1 0 112 0v8.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                                Download Recent PDF
+                            </a>
                         </div>
-                    `;
-                }
-            } else {
-                caseDetailsDiv.innerHTML = `<p class="text-gray-500">No detailed case information found.</p>`;
-            }
-
-            // Display latest order
-            if (data.latest_order) {
-                const order = data.latest_order;
-                latestOrderDiv.innerHTML = `
-                    <div class="space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p><span class="font-semibold text-gray-600">Date:</span> ${order.date}</p>
-                        <p><span class="font-semibold text-gray-600">Description:</span> ${order.description}</p>
-                        <a href="${order.link}" target="_blank" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                            Download PDF
-                        </a>
                     </div>
                 `;
-            } else {
-                latestOrderDiv.innerHTML = `<p class="text-gray-500">No recent orders or judgments found.</p>`;
             }
 
-            resultsContainer.classList.remove('hidden');
+            resultContent.innerHTML = `
+                <div class="space-y-4">
+                    <p><span class="font-semibold">Case Type:</span> ${data.caseType}</p>
+                    <p><span class="font-semibold">Case Number:</span> ${data.caseNumber}</p>
+                    <p><span class="font-semibold">Filing Year:</span> ${data.filingYear}</p>
+                    <p><span class="font-semibold">Parties:</span> ${data.parties}</p>
+                    <p><span class="font-semibold">Filing Date:</span> ${data.filingDate}</p>
+                    <p><span class="font-semibold">Next Hearing Date:</span> ${data.nextHearingDate}</p>
+                    <div class="mt-6">
+                        <h3 class="lg:text-lg font-semibold text-gray-700 mb-2">Latest Orders/Judgments</h3>
+                        ${ordersHtml}
+                    </div>
+                </div>
+            `;
+            errorMessage.classList.add('hidden');
+        }
+        
+        /**
+         * Displays an error message to the user.
+         * @param {string} message The error message to display.
+         */
+        function displayErrorMessage(message) {
+            resultContent.innerHTML = '';
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        /**
+         * Renders the query log from the backend onto the page.
+         * @param {Array} logs The array of log entries.
+         */
+        function renderQueryLog(logs) {
+            logList.innerHTML = ''; // Clear existing log entries
+
+            if (logs.length === 0) {
+                logList.innerHTML = `<p class="text-center text-gray-500">No past queries found.</p>`;
+                return;
+            }
+
+            logs.forEach(log => {
+                const logItem = document.createElement('div');
+                logItem.classList.add('bg-white', 'p-4', 'rounded-lg', 'border', 'border-gray-200', 'shadow-sm');
+
+                const queryDetails = `
+                    <p class="font-semibold">Query at ${new Date(log.timestamp).toLocaleString()}</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 ml-4 mt-2">
+                        <li>Case Type: ${log.query.caseType}</li>
+                        <li>Case Number: ${log.query.caseNumber}</li>
+                        <li>Filing Year: ${log.query.filingYear}</li>
+                    </ul>
+                `;
+
+                // Check if the response was an error or a successful case
+                const parsedResponse = JSON.parse(log.response);
+                let responseDetails;
+                if (parsedResponse.message) {
+                    responseDetails = `<p class="text-sm text-red-500 font-medium mt-2">Status: ${parsedResponse.message}</p>`;
+                } else {
+                    responseDetails = `
+                        <p class="text-sm text-green-600 font-medium mt-2">Status: Success</p>
+                        <p class="text-sm text-gray-700 mt-1">Parties: ${parsedResponse.parties}</p>
+                    `;
+                }
+
+                logItem.innerHTML = queryDetails + responseDetails;
+                logList.appendChild(logItem);
+            });
         }
     </script>
 </body>
