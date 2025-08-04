@@ -189,7 +189,7 @@ app.get('/', (req, res) => {
 
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
-            <h1 class="4xl:text-5xl font-bold text-gray-800">Court Case Dashboard</h1>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Court Case Dashboard</h1>
             <p class="text-lg text-gray-600 mt-2">Find and view case details from a simulated eCourts portal.</p>
         </header>
 
@@ -248,6 +248,9 @@ app.get('/', (req, res) => {
     </div>
 
     <script>
+        // Use a relative path for API calls when the frontend and backend
+        // are served from the same server (like in this single-file app).
+        // This avoids cross-origin errors.
         const searchForm = document.getElementById('search-form');
         const caseTypeSelect = document.getElementById('case-type');
         const caseNumberInput = document.getElementById('case-number');
@@ -256,7 +259,6 @@ app.get('/', (req, res) => {
         const resultContent = document.getElementById('result-content');
         const errorMessage = document.getElementById('error-message');
         const logList = document.getElementById('log-list');
-        const VERCEL_URL = 'https://court-data-fetcher-mini-dashboard.vercel.app'; // Your live Vercel URL
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchQueryLog();
@@ -270,11 +272,12 @@ app.get('/', (req, res) => {
                 caseNumber: caseNumberInput.value.trim(),
                 filingYear: filingYearSelect.value
             };
-            resultContent.innerHTML = \`<p class="text-center text-gray-500">Fetching data...</p>\`;
+            resultContent.innerHTML = `<p class="text-center text-gray-500">Fetching data...</p>`;
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             try {
-                const response = await fetch(\`\${VERCEL_URL}/api/case\`, {
+                // Use a relative path to call the API endpoint on the same server
+                const response = await fetch('/api/case', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(query)
@@ -294,25 +297,26 @@ app.get('/', (req, res) => {
 
         async function fetchQueryLog() {
             try {
-                const response = await fetch(\`\${VERCEL_URL}/api/log\`);
+                // Use a relative path to call the API endpoint on the same server
+                const response = await fetch('/api/log');
                 const logs = await response.json();
                 renderQueryLog(logs);
             } catch (error) {
                 console.error('Error fetching log:', error);
-                logList.innerHTML = \`<p class="text-center text-gray-500">Could not fetch query log from the server.</p>\`;
+                logList.innerHTML = `<p class="text-center text-gray-500">Could not fetch query log from the server.</p>`;
             }
         }
 
         function displayCaseData(data) {
-            let ordersHtml = \`<p class="text-sm text-gray-600 mb-2">No recent orders or judgments found.</p>\`;
+            let ordersHtml = `<p class="text-sm text-gray-600 mb-2">No recent orders or judgments found.</p>`;
             if (data.orders && data.orders.length > 0) {
                 const mostRecentOrder = data.orders[0];
-                ordersHtml = \`
+                ordersHtml = `
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <p class="text-sm text-gray-700"><span class="font-bold">Date:</span> \${mostRecentOrder.date}</p>
-                        <p class="text-sm text-gray-700"><span class="font-bold">Description:</span> \${mostRecentOrder.description}</p>
+                        <p class="text-sm text-gray-700"><span class="font-bold">Date:</span> ${mostRecentOrder.date}</p>
+                        <p class="text-sm text-gray-700"><span class="font-bold">Description:</span> ${mostRecentOrder.description}</p>
                         <div class="mt-2">
-                            <a href="\${mostRecentOrder.pdfLink}" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white font-medium rounded-md hover:bg-blue-600 transition-colors" download="Order_\${mostRecentOrder.date}.pdf">
+                            <a href="${mostRecentOrder.pdfLink}" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white font-medium rounded-md hover:bg-blue-600 transition-colors" download="Order_${mostRecentOrder.date}.pdf">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 11.586V3a1 1 0 112 0v8.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
@@ -320,22 +324,22 @@ app.get('/', (req, res) => {
                             </a>
                         </div>
                     </div>
-                \`;
+                `;
             }
-            resultContent.innerHTML = \`
+            resultContent.innerHTML = `
                 <div class="space-y-4">
-                    <p><span class="font-semibold">Case Type:</span> \${data.caseType}</p>
-                    <p><span class="font-semibold">Case Number:</span> \${data.caseNumber}</p>
-                    <p><span class="font-semibold">Filing Year:</span> \${data.filingYear}</p>
-                    <p><span class="font-semibold">Parties:</span> \${data.parties}</p>
-                    <p><span class="font-semibold">Filing Date:</span> \${data.filingDate}</p>
-                    <p><span class="font-semibold">Next Hearing Date:</span> \${data.nextHearingDate}</p>
+                    <p><span class="font-semibold">Case Type:</span> ${data.caseType}</p>
+                    <p><span class="font-semibold">Case Number:</span> ${data.caseNumber}</p>
+                    <p><span class="font-semibold">Filing Year:</span> ${data.filingYear}</p>
+                    <p><span class="font-semibold">Parties:</span> ${data.parties}</p>
+                    <p><span class="font-semibold">Filing Date:</span> ${data.filingDate}</p>
+                    <p><span class="font-semibold">Next Hearing Date:</span> ${data.nextHearingDate}</p>
                     <div class="mt-6">
                         <h3 class="lg:text-lg font-semibold text-gray-700 mb-2">Latest Orders/Judgments</h3>
-                        \${ordersHtml}
+                        ${ordersHtml}
                     </div>
                 </div>
-            \`;
+            `;
             errorMessage.classList.add('hidden');
         }
         
@@ -348,29 +352,29 @@ app.get('/', (req, res) => {
         function renderQueryLog(logs) {
             logList.innerHTML = '';
             if (logs.length === 0) {
-                logList.innerHTML = \`<p class="text-center text-gray-500">No past queries found.</p>\`;
+                logList.innerHTML = `<p class="text-center text-gray-500">No past queries found.</p>`;
                 return;
             }
             logs.forEach(log => {
                 const logItem = document.createElement('div');
                 logItem.classList.add('bg-white', 'p-4', 'rounded-lg', 'border', 'border-gray-200', 'shadow-sm');
-                const queryDetails = \`
-                    <p class="font-semibold">Query at \${new Date(log.timestamp).toLocaleString()}</p>
+                const queryDetails = `
+                    <p class="font-semibold">Query at ${new Date(log.timestamp).toLocaleString()}</p>
                     <ul class="list-disc list-inside text-sm text-gray-600 ml-4 mt-2">
-                        <li>Case Type: \${log.query.caseType}</li>
-                        <li>Case Number: \${log.query.caseNumber}</li>
-                        <li>Filing Year: \${log.query.filingYear}</li>
+                        <li>Case Type: ${log.query.caseType}</li>
+                        <li>Case Number: ${log.query.caseNumber}</li>
+                        <li>Filing Year: ${log.query.filingYear}</li>
                     </ul>
-                \`;
+                `;
                 const parsedResponse = JSON.parse(log.response);
                 let responseDetails;
                 if (parsedResponse.message) {
-                    responseDetails = \`<p class="text-sm text-red-500 font-medium mt-2">Status: \${parsedResponse.message}</p>\`;
+                    responseDetails = `<p class="text-sm text-red-500 font-medium mt-2">Status: ${parsedResponse.message}</p>`;
                 } else {
-                    responseDetails = \`
+                    responseDetails = `
                         <p class="text-sm text-green-600 font-medium mt-2">Status: Success</p>
-                        <p class="text-sm text-gray-700 mt-1">Parties: \${parsedResponse.parties}</p>
-                    \`;
+                        <p class="text-sm text-gray-700 mt-1">Parties: ${parsedResponse.parties}</p>
+                    `;
                 }
                 logItem.innerHTML = queryDetails + responseDetails;
                 logList.appendChild(logItem);
