@@ -256,6 +256,7 @@ app.get('/', (req, res) => {
         const resultContent = document.getElementById('result-content');
         const errorMessage = document.getElementById('error-message');
         const logList = document.getElementById('log-list');
+        const VERCEL_URL = 'https://court-data-fetcher-mini-dashboard.vercel.app'; // Your live Vercel URL
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchQueryLog();
@@ -273,8 +274,7 @@ app.get('/', (req, res) => {
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             try {
-                // REPLACE THIS URL with your live Vercel URL
-                const response = await fetch('https://your-backend-app-url.vercel.app/api/case', {
+                const response = await fetch(\`\${VERCEL_URL}/api/case\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(query)
@@ -294,8 +294,7 @@ app.get('/', (req, res) => {
 
         async function fetchQueryLog() {
             try {
-                // REPLACE THIS URL with your live Vercel URL
-                const response = await fetch('https://your-backend-app-url.vercel.app/api/log');
+                const response = await fetch(\`\${VERCEL_URL}/api/log\`);
                 const logs = await response.json();
                 renderQueryLog(logs);
             } catch (error) {
