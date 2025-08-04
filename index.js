@@ -248,9 +248,6 @@ app.get('/', (req, res) => {
     </div>
 
     <script>
-        // Use a relative path for API calls when the frontend and backend
-        // are served from the same server (like in this single-file app).
-        // This avoids cross-origin errors.
         const searchForm = document.getElementById('search-form');
         const caseTypeSelect = document.getElementById('case-type');
         const caseNumberInput = document.getElementById('case-number');
@@ -383,10 +380,3 @@ app.get('/', (req, res) => {
     </script>
 </body>
 </html>
-`);
-});
-
-// Start the server
-app.listen(port, () => {
-    console.log(`Full-stack server running at http://localhost:${port}`);
-});
