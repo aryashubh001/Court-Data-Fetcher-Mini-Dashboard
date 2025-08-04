@@ -256,6 +256,7 @@ app.get('/', (req, res) => {
         const resultContent = document.getElementById('result-content');
         const errorMessage = document.getElementById('error-message');
         const logList = document.getElementById('log-list');
+        const BASE_URL = 'http://localhost:3000';
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchQueryLog();
@@ -273,8 +274,7 @@ app.get('/', (req, res) => {
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
             try {
-                // Use a relative path to call the API endpoint on the same server
-                const response = await fetch('/api/case', {
+                const response = await fetch(\`\${BASE_URL}/api/case\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(query)
@@ -294,8 +294,7 @@ app.get('/', (req, res) => {
 
         async function fetchQueryLog() {
             try {
-                // Use a relative path to call the API endpoint on the same server
-                const response = await fetch('/api/log');
+                const response = await fetch(\`\${BASE_URL}/api/log\`);
                 const logs = await response.json();
                 renderQueryLog(logs);
             } catch (error) {
@@ -380,3 +379,10 @@ app.get('/', (req, res) => {
     </script>
 </body>
 </html>
+`);
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Full-stack server running at http://localhost:${port}`);
+});
