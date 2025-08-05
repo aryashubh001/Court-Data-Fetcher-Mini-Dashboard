@@ -1,15 +1,24 @@
 {
-  "name": "court-data-fetcher-mini-dashboard",
+  "name": "court-data-fetcher-dashboard",
   "version": "1.0.0",
-  "description": "A Node.js Express application that serves a court data dashboard.",
+  "description": "A Node.js Express application that serves a court data dashboard with simulated web scraping.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "court",
+    "data",
+    "dashboard",
+    "web scraping",
+    "nodejs",
+    "express",
+    "playwright"
+  ],
+  "author": "Your Name",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "playwright": "^1.45.0"
   }
 }
