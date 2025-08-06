@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "npx playwright install chromium --target-path=$(npm root)/.playwright-browsers" // Updated line
+    "postinstall": "npx playwright install chromium"
   },
   "keywords": [
     "court",
