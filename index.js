@@ -1,23 +1,68 @@
 // This is your backend server file. It serves the static frontend
 // and handles the API calls.
-// This version uses MOCK_DATA to simulate web scraping for reliable deployment.
+// This version uses MOCK_DATA for simulated web scraping and SQLite for persistent logging.
 
 const express = require('express');
-const path = require('path'); // Node.js built-in module for working with file and directory paths
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose(); // Import sqlite3
 const app = express();
-const port = process.env.PORT || 3000; // Use process.env.PORT for hosting platforms like Render
+const port = process.env.PORT || 3000;
 
 // Serve static files from the 'public' directory.
-// This line tells Express to look for static assets (like your index.html)
-// in a folder named 'public' relative to where index.js is located.
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to parse JSON bodies from incoming requests.
 app.use(express.json());
 
+// --- DATABASE INITIALIZATION (SQLite) ---
+// Initialize SQLite database
+const db = new sqlite3.Database('./queries.db', (err) => {
+    if (err) {
+        console.error('Error connecting to SQLite database:', err.message);
+    } else {
+        console.log('Connected to the SQLite database.');
+        // Create queries_log table if it doesn't exist
+        db.run(`CREATE TABLE IF NOT EXISTS queries_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            case_type TEXT,
+            case_number TEXT,
+            filing_year TEXT,
+            response_data TEXT
+        )`, (createErr) => {
+            if (createErr) {
+                console.error('Error creating table:', createErr.message);
+            } else {
+                console.log('Table "queries_log" ready.');
+            }
+        });
+    }
+});
+
+/**
+ * Logs a query and its response to the SQLite database.
+ * @param {object} query The user's search query.
+ * @param {object} response The simulated API response.
+ */
+function logQueryToDb(query, response) {
+    const timestamp = new Date().toISOString();
+    const sql = `INSERT INTO queries_log (timestamp, case_type, case_number, filing_year, response_data) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [
+        timestamp,
+        query.caseType,
+        query.caseNumber,
+        query.filingYear,
+        JSON.stringify(response) // Store the full response as a JSON string
+    ], function(err) {
+        if (err) {
+            console.error('Error inserting into database:', err.message);
+        } else {
+            console.log(`Query logged with ID: ${this.lastID}`);
+        }
+    });
+}
+
 // --- MOCK DATA (SIMULATING WEBSCRAPING LOGIC) ---
-// This object simulates the data that would be scraped from the court website.
-// It's used when real Playwright scraping is challenging to deploy.
 const MOCK_DATA = {
     'criminal-123-2023': {
         caseType: 'Criminal Case',
@@ -53,41 +98,12 @@ const MOCK_DATA = {
     }
 };
 
-// --- DATABASE SIMULATION (REPLACING MYSQL LOGIC) ---
-// This array will temporarily store query logs in memory.
-// In a real application, this would be replaced with a connection to a database like MySQL.
-const queryLog = [];
-
-/**
- * Simulates a database operation to log a new query.
- * In a real scenario, this would insert data into a MySQL table.
- * @param {object} query The user's search query.
- * @param {object} response The simulated API response.
- */
-function logQueryToDb(query, response) {
-    const timestamp = new Date().toISOString();
-    const logEntry = {
-        timestamp,
-        query,
-        response: JSON.stringify(response) // Store the raw response as a string
-    };
-    queryLog.unshift(logEntry); // Add to the beginning of the array for chronological display
-    console.log('Query logged to simulated database:', logEntry);
-}
-
 // --- SIMULATED WEB SCRAPING LOGIC ---
-/**
- * Simulates web scraping by looking up data in the MOCK_DATA object.
- * This replaces the Playwright-based scraping for reliable deployment.
- * @param {object} query The user's search query.
- * @returns {Promise<object|null>} A promise that resolves to the mock data or null if not found.
- */
 async function scrapeCaseData(query) {
     const { caseType, caseNumber, filingYear } = query;
     const key = `${caseType}-${caseNumber}-${filingYear}`;
-    const caseData = MOCK_DATA[key]; // Look up in mock data
+    const caseData = MOCK_DATA[key];
 
-    // Simulate a network delay for realism
     await new Promise(resolve => setTimeout(resolve, 500)); 
 
     if (caseData) {
@@ -101,12 +117,10 @@ async function scrapeCaseData(query) {
 
 // --- API ROUTES ---
 
-// Endpoint to handle case data requests (POST method).
 app.post('/api/case', async (req, res) => {
     console.log('Received API request:', req.body);
     const { caseType, caseNumber, filingYear } = req.body;
 
-    // Call the simulated web scraper.
     const caseData = await scrapeCaseData({ caseType, caseNumber, filingYear });
 
     if (caseData) {
@@ -119,12 +133,29 @@ app.post('/api/case', async (req, res) => {
     }
 });
 
-// Endpoint to retrieve the query log (GET method).
+// Endpoint to retrieve the query log from the SQLite database
 app.get('/api/log', (req, res) => {
-    res.status(200).json(queryLog);
+    db.all("SELECT * FROM queries_log ORDER BY timestamp DESC", [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching logs from database:', err.message);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        // Map rows to match the expected frontend format (query, response)
+        const logs = rows.map(row => ({
+            timestamp: row.timestamp,
+            query: {
+                caseType: row.case_type,
+                caseNumber: row.case_number,
+                filingYear: row.filing_year
+            },
+            response: row.response_data // response_data is already JSON string
+        }));
+        res.status(200).json(logs);
+    });
 });
 
-// Start the server and listen for incoming requests on the specified port.
+// Start the server
 app.listen(port, () => {
     console.log(`Full-stack server running at http://localhost:${port}`);
 });
