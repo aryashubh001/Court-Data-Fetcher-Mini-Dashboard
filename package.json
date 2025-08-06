@@ -1,11 +1,10 @@
 {
   "name": "court-data-fetcher-dashboard",
   "version": "1.0.0",
-  "description": "A Node.js Express application that serves a court data dashboard with real web scraping for Delhi High Court.",
+  "description": "A Node.js Express application that serves a court data dashboard with simulated web scraping.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "npx playwright install chromium"
+    "start": "node index.js"
   },
   "keywords": [
     "court",
@@ -14,14 +13,12 @@
     "web scraping",
     "nodejs",
     "express",
-    "playwright",
-    "delhi high court"
+    "sqlite"
   ],
   "author": "Your Name",
   "license": "ISC",
   "dependencies": {
     "express": "^4.19.2",
-    "playwright": "^1.45.0",
     "sqlite3": "^5.1.7"
   }
 }
