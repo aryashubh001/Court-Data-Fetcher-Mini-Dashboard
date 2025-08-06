@@ -53,9 +53,11 @@ async function scrapeCaseData(query) {
     try {
         // 1. Launch a headless Chromium browser
         // headless: true for deployment (no visible browser window)
-        // For local debugging, you can temporarily change headless: true to headless: false
-        // to see the browser automation in action. Remember to change it back to true for deployment.
-        browser = await chromium.launch({ headless: true });
+        // IMPORTANT: Add '--no-sandbox' and '--disable-setuid-sandbox' for deployment on Render/Heroku
+        browser = await chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'] // Added for deployment compatibility
+        });
         const page = await browser.newPage();
 
         // Set a default timeout for navigation and actions
