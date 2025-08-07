@@ -7,23 +7,53 @@
     <!-- Load Tailwind CSS for utility-first styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Custom styles for a better look and feel */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
+            font-family: 'Inter', sans-serif; /* Use Inter font as specified */
+            background-color: #f3f4f6; /* Light gray background */
+            color: #1f2937; /* Dark gray text */
         }
         .container {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 1.5rem;
+            max-width: 900px; /* Max width for content */
+            margin: 2rem auto; /* Center content with vertical margin */
+            padding: 1.5rem; /* Padding inside the container */
         }
         .card {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            padding: 2rem;
+            background-color: white; /* White background for cards */
+            border-radius: 12px; /* Rounded corners for cards */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Subtle shadow */
+            padding: 2rem; /* Padding inside cards */
+        }
+        /* CAPTCHA specific styles */
+        .captcha-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .captcha-code-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #d81b60; /* A distinct color */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            padding: 0.5rem 0.8rem;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            min-width: 80px; /* Ensure enough space for 4 digits */
+            text-align: center;
+        }
+        .refresh-icon {
+            cursor: pointer;
+            color: #4f46e5; /* Indigo color for icon */
+            font-size: 1.25rem;
+        }
+        .refresh-icon:hover {
+            color: #3730a3; /* Darker indigo on hover */
         }
     </style>
+    <!-- Font Awesome for refresh icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body class="bg-gray-100">
 
@@ -63,6 +93,17 @@
                         </script>
                     </select>
                 </div>
+
+                <!-- CAPTCHA Section -->
+                <div class="md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CAPTCHA Verification</label>
+                    <div class="captcha-container">
+                        <span id="captcha-code-display" class="captcha-code-display"></span>
+                        <i class="fas fa-sync-alt refresh-icon" id="refresh-captcha-button"></i>
+                        <input type="text" id="captcha-input" name="captcha-input" placeholder="Enter CAPTCHA" class="flex-grow rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2">
+                    </div>
+                </div>
+
                 <!-- Submit Button -->
                 <div class="md:col-span-3 text-center">
                     <button type="submit" class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-300">
@@ -92,64 +133,125 @@
     </div>
 
     <script>
+        // Get references to DOM elements
         const searchForm = document.getElementById('search-form');
         const caseTypeSelect = document.getElementById('case-type');
         const caseNumberInput = document.getElementById('case-number');
         const filingYearSelect = document.getElementById('filing-year');
+        const captchaCodeDisplay = document.getElementById('captcha-code-display');
+        const captchaInput = document.getElementById('captcha-input');
+        const refreshCaptchaButton = document.getElementById('refresh-captcha-button');
         const resultSection = document.getElementById('result-section');
         const resultContent = document.getElementById('result-content');
         const errorMessage = document.getElementById('error-message');
         const logList = document.getElementById('log-list');
 
+        // Event listener to run when the DOM is fully loaded
         document.addEventListener('DOMContentLoaded', () => {
-            fetchQueryLog();
-            searchForm.addEventListener('submit', handleFormSubmit);
+            fetchInitialCaptcha(); // Fetch CAPTCHA on page load
+            fetchQueryLog(); // Fetch and display the query log
+            searchForm.addEventListener('submit', handleFormSubmit); // Set up form submission
+            refreshCaptchaButton.addEventListener('click', fetchNewCaptcha); // Set up CAPTCHA refresh
         });
 
+        /**
+         * Fetches a new CAPTCHA code from the backend and updates the display.
+         */
+        async function fetchNewCaptcha() {
+            try {
+                const response = await fetch('/api/captcha');
+                const data = await response.json();
+                if (data.captcha_code) {
+                    captchaCodeDisplay.textContent = data.captcha_code;
+                    captchaInput.value = ''; // Clear CAPTCHA input field
+                }
+            } catch (error) {
+                console.error('Error fetching new CAPTCHA:', error);
+                captchaCodeDisplay.textContent = 'Error';
+            }
+        }
+
+        // Fetch CAPTCHA on initial page load
+        async function fetchInitialCaptcha() {
+            await fetchNewCaptcha();
+        }
+
+        /**
+         * Handles the form submission event.
+         * Prevents default form submission and calls the API to fetch case data.
+         * @param {Event} event The form submission event.
+         */
         async function handleFormSubmit(event) {
-            event.preventDefault();
+            event.preventDefault(); // Stop the browser from reloading the page
             const query = {
                 caseType: caseTypeSelect.value,
                 caseNumber: caseNumberInput.value.trim(),
-                filingYear: filingYearSelect.value
+                filingYear: filingYearSelect.value,
+                captchaInput: captchaInput.value.trim() // Include CAPTCHA input
             };
+
+            // Basic client-side validation for CAPTCHA
+            if (!query.captchaInput) {
+                displayErrorMessage('Please enter the CAPTCHA code.');
+                return;
+            }
+
+            // Show a loading indicator and hide previous error messages
             resultContent.innerHTML = `<p class="text-center text-gray-500">Fetching data...</p>`;
             resultSection.classList.remove('hidden');
             errorMessage.classList.add('hidden');
+
             try {
+                // Make a POST request to the backend API.
                 const response = await fetch('/api/case', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(query)
+                    body: JSON.stringify(query) // Send query data including CAPTCHA
                 });
-                const result = await response.json();
+
+                const result = await response.json(); // Parse the JSON response from the backend
+
                 if (response.ok && result.success) {
+                    // If the response is successful, display the case data
                     displayCaseData(result.data);
                 } else {
-                    displayErrorMessage(result.message);
+                    // If CAPTCHA was incorrect, backend sends new captcha_code
+                    if (result.captcha_code) {
+                        captchaCodeDisplay.textContent = result.captcha_code; // Update CAPTCHA on display
+                        captchaInput.value = ''; // Clear user's CAPTCHA input
+                    }
+                    displayErrorMessage(result.message); // Display error message (e.g., CAPTCHA incorrect)
                 }
             } catch (error) {
+                // Catch any network errors (e.g., backend server not running)
                 console.error('Error fetching data:', error);
                 displayErrorMessage('Failed to connect to the backend server. Please make sure it is running.');
             }
-            fetchQueryLog();
+            fetchQueryLog(); // Refresh the query log after each submission
         }
 
+        /**
+         * Fetches the query log from the backend API and renders it on the page.
+         */
         async function fetchQueryLog() {
             try {
                 const response = await fetch('/api/log');
-                const logs = await response.json();
-                renderQueryLog(logs);
+                const logs = await response.json(); // Parse the JSON array of logs
+                renderQueryLog(logs); // Render the fetched logs
             } catch (error) {
                 console.error('Error fetching log:', error);
                 logList.innerHTML = `<p class="text-center text-gray-500">Could not fetch query log from the server.</p>`;
             }
         }
 
+        /**
+         * Displays the fetched case data on the result section of the page.
+         * @param {object} data The case data object to display.
+         */
         function displayCaseData(data) {
             let ordersHtml = `<p class="text-sm text-gray-600 mb-2">No recent orders or judgments found.</p>`;
             if (data.orders && data.orders.length > 0) {
-                const mostRecentOrder = data.orders[0];
+                const mostRecentOrder = data.orders[0]; // Display only the most recent order
                 ordersHtml = `
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="text-sm text-gray-700"><span class="font-bold">Date:</span> ${mostRecentOrder.date}</p>
@@ -165,6 +267,7 @@
                     </div>
                 `;
             }
+            // Populate the result content area with case details
             resultContent.innerHTML = `
                 <div class="space-y-4">
                     <p><span class="font-semibold">Case Type:</span> ${data.caseType}</p>
@@ -213,6 +316,7 @@
                         <li>Case Type: ${log.query.caseType}</li>
                         <li>Case Number: ${log.query.caseNumber}</li>
                         <li>Filing Year: ${log.query.filingYear}</li>
+                        <li>CAPTCHA Attempt: ${log.captcha_attempt || 'N/A'}</li>
                     </ul>
                 `;
                 
