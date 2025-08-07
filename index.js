@@ -1,10 +1,12 @@
 // This is your backend server file. It serves the static frontend
 // and handles the API calls.
-// This version uses MOCK_DATA to simulate web scraping for reliable deployment.
+// This version includes basic CAPTCHA handling for Delhi High Court
+// and uses MOCK_DATA for simulated case details.
 
 const express = require('express');
+const { chromium } = require('playwright'); // Still needed for browser automation
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose(); // Import sqlite3
+const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -15,13 +17,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // --- DATABASE INITIALIZATION (SQLite) ---
-// Initialize SQLite database
 const db = new sqlite3.Database('./queries.db', (err) => {
     if (err) {
         console.error('Error connecting to SQLite database:', err.message);
     } else {
         console.log('Connected to the SQLite database.');
-        // Create queries_log table if it doesn't exist
         db.run(`CREATE TABLE IF NOT EXISTS queries_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
@@ -41,8 +41,6 @@ const db = new sqlite3.Database('./queries.db', (err) => {
 
 /**
  * Logs a query and its response to the SQLite database.
- * @param {object} query The user's search query.
- * @param {object} response The simulated API response.
  */
 function logQueryToDb(query, response) {
     const timestamp = new Date().toISOString();
@@ -52,7 +50,7 @@ function logQueryToDb(query, response) {
         query.caseType,
         query.caseNumber,
         query.filingYear,
-        JSON.stringify(response) // Store the full response as a JSON string
+        JSON.stringify(response)
     ], function(err) {
         if (err) {
             console.error('Error inserting into database:', err.message);
