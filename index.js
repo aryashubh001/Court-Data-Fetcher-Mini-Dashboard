@@ -1,10 +1,9 @@
 // This is your backend server file. It serves the static frontend
 // and handles the API calls.
-// This version includes basic CAPTCHA handling for Delhi High Court
-// and uses MOCK_DATA for simulated case details.
+// This version uses MOCK_DATA for simulated web scraping, SQLite for persistent logging,
+// and simulates CAPTCHA validation.
 
 const express = require('express');
-const { chromium } = require('playwright'); // Still needed for browser automation
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
@@ -15,6 +14,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to parse JSON bodies from incoming requests.
 app.use(express.json());
+
+// --- CAPTCHA STATE ---
+let currentCaptcha = {
+    code: '',
+    timestamp: 0 // To potentially add expiry later
+};
+
+// Function to generate a new random 4-digit CAPTCHA
+function generateNewCaptcha() {
+    const code = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit number
+    currentCaptcha = {
+        code: code,
+        timestamp: Date.now()
+    };
+    console.log('New CAPTCHA generated:', currentCaptcha.code);
+    return currentCaptcha.code;
+}
 
 // --- DATABASE INITIALIZATION (SQLite) ---
 const db = new sqlite3.Database('./queries.db', (err) => {
@@ -28,12 +44,15 @@ const db = new sqlite3.Database('./queries.db', (err) => {
             case_type TEXT,
             case_number TEXT,
             filing_year TEXT,
-            response_data TEXT
-        )`, (createErr) => {
+            response_data TEXT,
+            captcha_attempt TEXT
+        )`, (createErr) => { // Added captcha_attempt column
             if (createErr) {
                 console.error('Error creating table:', createErr.message);
             } else {
                 console.log('Table "queries_log" ready.');
+                // Generate initial CAPTCHA on server start
+                generateNewCaptcha();
             }
         });
     }
@@ -42,15 +61,16 @@ const db = new sqlite3.Database('./queries.db', (err) => {
 /**
  * Logs a query and its response to the SQLite database.
  */
-function logQueryToDb(query, response) {
+function logQueryToDb(query, response, captchaAttempt = '') { // Added captchaAttempt parameter
     const timestamp = new Date().toISOString();
-    const sql = `INSERT INTO queries_log (timestamp, case_type, case_number, filing_year, response_data) VALUES (?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO queries_log (timestamp, case_type, case_number, filing_year, response_data, captcha_attempt) VALUES (?, ?, ?, ?, ?, ?)`;
     db.run(sql, [
         timestamp,
         query.caseType,
         query.caseNumber,
         query.filingYear,
-        JSON.stringify(response)
+        JSON.stringify(response),
+        captchaAttempt // Log the captcha attempt
     ], function(err) {
         if (err) {
             console.error('Error inserting into database:', err.message);
@@ -61,7 +81,6 @@ function logQueryToDb(query, response) {
 }
 
 // --- MOCK DATA (SIMULATING WEBSCRAPING LOGIC) ---
-// This object now contains 15 mock cases, 5 for each category.
 const MOCK_CASES = {
     'criminal': [
         { caseType: 'Criminal Case', caseNumber: '101', filingYear: '2023', parties: 'State vs. A', filingDate: '2023-01-01', nextHearingDate: '2024-09-01', orders: [{ date: '2024-08-01', description: 'Order on bail.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+1' }] },
@@ -87,15 +106,8 @@ const MOCK_CASES = {
 };
 
 // --- SIMULATED WEB SCRAPING LOGIC ---
-/**
- * Simulates web scraping by looking up data in the MOCK_CASES object.
- * It now returns a random case for the selected case type,
- * regardless of the case number or year entered.
- * @param {object} query The user's search query.
- * @returns {Promise<object|null>} A promise that resolves to the mock data or null if not found.
- */
 async function scrapeCaseData(query) {
-    const { caseType, caseNumber, filingYear } = query;
+    const { caseType } = query;
     const casesForType = MOCK_CASES[caseType];
 
     // Simulate a network delay for realism
@@ -115,45 +127,7 @@ async function scrapeCaseData(query) {
 
 // --- API ROUTES ---
 
-app.post('/api/case', async (req, res) => {
-    console.log('Received API request:', req.body);
-    const { caseType, caseNumber, filingYear } = req.body;
-
-    const caseData = await scrapeCaseData({ caseType, caseNumber, filingYear });
-
-    if (caseData) {
-        logQueryToDb(req.body, caseData);
-        res.status(200).json({ success: true, data: caseData });
-    } else {
-        const errorResponse = { message: 'No case found for the given details.' };
-        logQueryToDb(req.body, errorResponse);
-        res.status(404).json({ success: false, message: 'No case found with these details.' });
-    }
-});
-
-// Endpoint to retrieve the query log from the SQLite database
-app.get('/api/log', (req, res) => {
-    db.all("SELECT * FROM queries_log ORDER BY timestamp DESC", [], (err, rows) => {
-        if (err) {
-            console.error('Error fetching logs from database:', err.message);
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        // Map rows to match the expected frontend format (query, response)
-        const logs = rows.map(row => ({
-            timestamp: row.timestamp,
-            query: {
-                caseType: row.case_type,
-                caseNumber: row.case_number,
-                filingYear: row.filing_year
-            },
-            response: row.response_data // response_data is already JSON string
-        }));
-        res.status(200).json(logs);
-    });
-});
-
-// Start the server
-app.listen(port, () => {
-    console.log(`Full-stack server running at http://localhost:${port}`);
-});
+// Endpoint to provide the current CAPTCHA code to the frontend
+app.get('/api/captcha', (req, res) => {
+    // Generate a new CAPTCHA on request for refresh
+        
