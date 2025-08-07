@@ -4,7 +4,7 @@
 
 const express = require('express');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3').verbose(); // Import sqlite3
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -14,49 +14,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Middleware to parse JSON bodies from incoming requests.
 app.use(express.json());
 
-// --- MOCK DATA (SIMULATING WEBSCRAPING LOGIC) ---
-// This object simulates the data that would be scraped from the court website.
-const MOCK_DATA = {
-    'criminal-123-2023': {
-        caseType: 'Criminal Case',
-        caseNumber: '123',
-        filingYear: '2023',
-        parties: 'State of Delhi vs. John Doe',
-        filingDate: '2023-01-15',
-        nextHearingDate: '2025-09-01',
-        orders: [
-            {
-                date: '2024-07-28',
-                description: 'Final order on bail application.',
-                pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+Order+PDF'
-            },
-        ],
-        rawResponse: '<html><body>...mock HTML content from a criminal case...</body></html>'
-    },
-    'civil-456-2024': {
-        caseType: 'Civil Suit',
-        caseNumber: '456',
-        filingYear: '2024',
-        parties: 'Jane Doe vs. ABC Corp',
-        filingDate: '2024-03-20',
-        nextHearingDate: '2025-10-15',
-        orders: [
-            {
-                date: '2024-08-01',
-                description: 'Case listed for final arguments.',
-                pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+Order+PDF'
-            }
-        ],
-        rawResponse: '<html><body>...mock HTML content from a civil suit...</body></html>'
-    }
-};
-
 // --- DATABASE INITIALIZATION (SQLite) ---
+// Initialize SQLite database
 const db = new sqlite3.Database('./queries.db', (err) => {
     if (err) {
         console.error('Error connecting to SQLite database:', err.message);
     } else {
         console.log('Connected to the SQLite database.');
+        // Create queries_log table if it doesn't exist
         db.run(`CREATE TABLE IF NOT EXISTS queries_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
@@ -76,6 +41,8 @@ const db = new sqlite3.Database('./queries.db', (err) => {
 
 /**
  * Logs a query and its response to the SQLite database.
+ * @param {object} query The user's search query.
+ * @param {object} response The simulated API response.
  */
 function logQueryToDb(query, response) {
     const timestamp = new Date().toISOString();
@@ -85,7 +52,7 @@ function logQueryToDb(query, response) {
         query.caseType,
         query.caseNumber,
         query.filingYear,
-        JSON.stringify(response)
+        JSON.stringify(response) // Store the full response as a JSON string
     ], function(err) {
         if (err) {
             console.error('Error inserting into database:', err.message);
@@ -95,26 +62,67 @@ function logQueryToDb(query, response) {
     });
 }
 
+// --- MOCK DATA (SIMULATING WEBSCRAPING LOGIC) ---
+// This object now contains 15 mock cases, 5 for each category.
+const MOCK_CASES = {
+    'criminal': [
+        { caseType: 'Criminal Case', caseNumber: '101', filingYear: '2023', parties: 'State vs. A', filingDate: '2023-01-01', nextHearingDate: '2024-09-01', orders: [{ date: '2024-08-01', description: 'Order on bail.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+1' }] },
+        { caseType: 'Criminal Case', caseNumber: '102', filingYear: '2023', parties: 'State vs. B', filingDate: '2023-02-01', nextHearingDate: '2024-10-01', orders: [{ date: '2024-08-05', description: 'Next hearing date set.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+2' }] },
+        { caseType: 'Criminal Case', caseNumber: '103', filingYear: '2024', parties: 'State vs. C', filingDate: '2024-03-01', nextHearingDate: '2024-11-01', orders: [{ date: '2024-07-20', description: 'Final order.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+3' }] },
+        { caseType: 'Criminal Case', caseNumber: '104', filingYear: '2024', parties: 'State vs. D', filingDate: '2024-04-01', nextHearingDate: '2024-12-01', orders: [{ date: '2024-08-10', description: 'Interim order on evidence.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+4' }] },
+        { caseType: 'Criminal Case', caseNumber: '105', filingYear: '2024', parties: 'State vs. E', filingDate: '2024-05-01', nextHearingDate: '2025-01-01', orders: [{ date: '2024-08-15', description: 'Arguments heard.', pdfLink: 'https://placehold.co/600x400/FF0000/FFFFFF?text=Mock+PDF+5' }] }
+    ],
+    'civil': [
+        { caseType: 'Civil Suit', caseNumber: '201', filingYear: '2022', parties: 'Plaintiff F vs. Defendant G', filingDate: '2022-01-01', nextHearingDate: '2024-09-02', orders: [{ date: '2024-08-02', description: 'Case review.', pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+PDF+6' }] },
+        { caseType: 'Civil Suit', caseNumber: '202', filingYear: '2023', parties: 'Plaintiff H vs. Defendant I', filingDate: '2023-02-02', nextHearingDate: '2024-10-02', orders: [{ date: '2024-08-06', description: 'Witness deposition.', pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+PDF+7' }] },
+        { caseType: 'Civil Suit', caseNumber: '203', filingYear: '2023', parties: 'Plaintiff J vs. Defendant K', filingDate: '2023-03-03', nextHearingDate: '2024-11-02', orders: [{ date: '2024-07-21', description: 'Mediation ordered.', pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+PDF+8' }] },
+        { caseType: 'Civil Suit', caseNumber: '204', filingYear: '2024', parties: 'Plaintiff L vs. Defendant M', filingDate: '2024-04-04', nextHearingDate: '2024-12-02', orders: [{ date: '2024-08-11', description: 'Interim relief granted.', pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+PDF+9' }] },
+        { caseType: 'Civil Suit', caseNumber: '205', filingYear: '2024', parties: 'Plaintiff N vs. Defendant O', filingDate: '2024-05-05', nextHearingDate: '2025-01-02', orders: [{ date: '2024-08-16', description: 'Case dismissed.', pdfLink: 'https://placehold.co/600x400/0000FF/FFFFFF?text=Mock+PDF+10' }] }
+    ],
+    'writ': [
+        { caseType: 'Writ Petition', caseNumber: '301', filingYear: '2021', parties: 'Petitioner P vs. State', filingDate: '2021-01-01', nextHearingDate: '2024-09-03', orders: [{ date: '2024-08-03', description: 'Notice issued.', pdfLink: 'https://placehold.co/600x400/008000/FFFFFF?text=Mock+PDF+11' }] },
+        { caseType: 'Writ Petition', caseNumber: '302', filingYear: '2022', parties: 'Petitioner Q vs. Union of India', filingDate: '2022-02-02', nextHearingDate: '2024-10-03', orders: [{ date: '2024-08-07', description: 'Directions for compliance.', pdfLink: 'https://placehold.co/600x400/008000/FFFFFF?text=Mock+PDF+12' }] },
+        { caseType: 'Writ Petition', caseNumber: '303', filingYear: '2023', parties: 'Petitioner R vs. State', filingDate: '2023-03-03', nextHearingDate: '2024-11-03', orders: [{ date: '2024-07-22', description: 'Interim stay granted.', pdfLink: 'https://placehold.co/600x400/008000/FFFFFF?text=Mock+PDF+13' }] },
+        { caseType: 'Writ Petition', caseNumber: '304', filingYear: '2024', parties: 'Petitioner S vs. Union of India', filingDate: '2024-04-04', nextHearingDate: '2024-12-03', orders: [{ date: '2024-08-12', description: 'Final arguments heard.', pdfLink: 'https://placehold.co/600x400/008000/FFFFFF?text=Mock+PDF+14' }] },
+        { caseType: 'Writ Petition', caseNumber: '305', filingYear: '2024', parties: 'Petitioner T vs. State', filingDate: '2024-05-05', nextHearingDate: '2025-01-03', orders: [{ date: '2024-08-17', description: 'Petition dismissed.', pdfLink: 'https://placehold.co/600x400/008000/FFFFFF?text=Mock+PDF+15' }] }
+    ]
+};
+
 // --- SIMULATED WEB SCRAPING LOGIC ---
+/**
+ * Simulates web scraping by looking up data in the MOCK_CASES object.
+ * It now returns a random case for the selected case type,
+ * regardless of the case number or year entered.
+ * @param {object} query The user's search query.
+ * @returns {Promise<object|null>} A promise that resolves to the mock data or null if not found.
+ */
 async function scrapeCaseData(query) {
     const { caseType, caseNumber, filingYear } = query;
-    const key = `${caseType}-${caseNumber}-${filingYear}`;
-    const caseData = MOCK_DATA[key];
+    const casesForType = MOCK_CASES[caseType];
+
+    // Simulate a network delay for realism
     await new Promise(resolve => setTimeout(resolve, 500));
-    if (caseData) {
-        console.log('Simulated scraping successful for:', key);
-        return caseData;
+
+    if (casesForType && casesForType.length > 0) {
+        // Return a random case from the available mock cases for the given type
+        const randomIndex = Math.floor(Math.random() * casesForType.length);
+        const randomCase = casesForType[randomIndex];
+        console.log('Simulated scraping successful. Returning a random mock case for type:', caseType);
+        return randomCase;
     } else {
-        console.log('Simulated scraping: No data found for:', key);
+        console.log('Simulated scraping: No data found for type:', caseType);
         return null;
     }
 }
 
 // --- API ROUTES ---
+
 app.post('/api/case', async (req, res) => {
     console.log('Received API request:', req.body);
     const { caseType, caseNumber, filingYear } = req.body;
+
     const caseData = await scrapeCaseData({ caseType, caseNumber, filingYear });
+
     if (caseData) {
         logQueryToDb(req.body, caseData);
         res.status(200).json({ success: true, data: caseData });
@@ -125,6 +133,7 @@ app.post('/api/case', async (req, res) => {
     }
 });
 
+// Endpoint to retrieve the query log from the SQLite database
 app.get('/api/log', (req, res) => {
     db.all("SELECT * FROM queries_log ORDER BY timestamp DESC", [], (err, rows) => {
         if (err) {
@@ -132,6 +141,7 @@ app.get('/api/log', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
+        // Map rows to match the expected frontend format (query, response)
         const logs = rows.map(row => ({
             timestamp: row.timestamp,
             query: {
@@ -139,12 +149,13 @@ app.get('/api/log', (req, res) => {
                 caseNumber: row.case_number,
                 filingYear: row.filing_year
             },
-            response: row.response_data
+            response: row.response_data // response_data is already JSON string
         }));
         res.status(200).json(logs);
     });
 });
 
+// Start the server
 app.listen(port, () => {
     console.log(`Full-stack server running at http://localhost:${port}`);
 });
