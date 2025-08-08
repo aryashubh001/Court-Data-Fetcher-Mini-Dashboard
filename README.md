@@ -1,6 +1,6 @@
 # Court-Data-Fetcher-Mini-Dashboard
 
- ##🚀 Project Objective
+ ## 🚀 Project Objective
 
 This project aims to build a small web application that simulates fetching and displaying case metadata and the latest orders/judgments for specific Indian court cases. The application provides a user-friendly interface to input case details and view the retrieved information, along with a log of past queries.
 
@@ -11,13 +11,9 @@ This project aims to build a small web application that simulates fetching and d
 * **Database:** SQLite3 (for persistent query logging)
 * **Deployment:** Render
 
----
-
 ## 🏛️ Court Targeted
 
 The application is designed to simulate fetching data from the **Delhi High Court** (`https://delhihighcourt.nic.in/case-status.asp`).
-
----
 
 ## 🕸️ Web Scraping Strategy (Simulated)
 
@@ -33,8 +29,6 @@ In a full production environment, the backend would integrate a robust web scrap
 * Implementing strategies for CAPTCHA solving (e.g., integrating with third-party CAPTCHA-solving APIs or advanced OCR techniques).
 * Extracting real-time case metadata and PDF links from the live site's HTML.
 
----
-
 ## 💾 Storage Strategy
 
 Each user query and its corresponding (simulated) response are logged to a **SQLite database** (`queries.db`). This fulfills the requirement for persistent storage.
@@ -47,8 +41,6 @@ Each user query and its corresponding (simulated) response are logged to a **SQL
 **Future Work:**
 For a large-scale production application, the SQLite database would be replaced with a more robust client-server RDBMS like **MySQL** or PostgreSQL, hosted on a dedicated database service, to ensure scalability and high availability.
 
----
-
 ## 🛡️ Simulated CAPTCHA Handling
 
 The application includes a **simulated CAPTCHA verification** step.
@@ -58,16 +50,12 @@ The application includes a **simulated CAPTCHA verification** step.
 * If the CAPTCHA is incorrect, an error message is displayed, and a new CAPTCHA is generated.
 * This demonstrates the logic for handling CAPTCHA without relying on external services or complex image processing.
 
----
-
 ## 🚀 Deployment
 
 The application is deployed as a full-stack Node.js web service on **Render**.
 
 **Live Application URL:**
 [https://court-data-fetcher-mini-dashboard-cg1h.onrender.com](https://court-data-fetcher-mini-dashboard-cg1h.onrender.com)
-
----
 
 ## 🧪 How to Run/Test the Live Application
 
@@ -89,6 +77,3 @@ The application is deployed as a full-stack Node.js web service on **Render**.
 **Expected Outcome:**
 * Upon successful CAPTCHA entry, the "Case Details" section will display information for a **randomly selected mock case** corresponding to the chosen Case Type.
 * The "Query Log" section at the bottom will update, showing your recent query and its status.
-
----
-
