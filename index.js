@@ -1,15 +1,16 @@
 // This is your backend server file. It serves the static frontend
 // and handles the API calls.
-// This version uses MOCK_DATA for simulated web scraping, SQLite for persistent logging,
-// and simulates CAPTCHA validation.
+// This version uses MOCK_DATA to simulate web scraping for reliable deployment.
 
 const express = require('express');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3').verbose(); // Import sqlite3
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000; // Use process.env.PORT for hosting platforms like Render
 
 // Serve static files from the 'public' directory.
+// This line tells Express to look for static assets (like your index.html)
+// in a folder named 'public' relative to where index.js is located.
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to parse JSON bodies from incoming requests.
@@ -33,11 +34,13 @@ function generateNewCaptcha() {
 }
 
 // --- DATABASE INITIALIZATION (SQLite) ---
+// Initialize SQLite database
 const db = new sqlite3.Database('./queries.db', (err) => {
     if (err) {
         console.error('Error connecting to SQLite database:', err.message);
     } else {
         console.log('Connected to the SQLite database.');
+        // Create queries_log table if it doesn't exist
         db.run(`CREATE TABLE IF NOT EXISTS queries_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
@@ -60,8 +63,11 @@ const db = new sqlite3.Database('./queries.db', (err) => {
 
 /**
  * Logs a query and its response to the SQLite database.
+ * @param {object} query The user's search query.
+ * @param {object} response The simulated API response.
+ * @param {string} captchaAttempt The CAPTCHA code entered by the user.
  */
-function logQueryToDb(query, response, captchaAttempt = '') { // Added captchaAttempt parameter
+function logQueryToDb(query, response, captchaAttempt = '') {
     const timestamp = new Date().toISOString();
     const sql = `INSERT INTO queries_log (timestamp, case_type, case_number, filing_year, response_data, captcha_attempt) VALUES (?, ?, ?, ?, ?, ?)`;
     db.run(sql, [
@@ -70,7 +76,7 @@ function logQueryToDb(query, response, captchaAttempt = '') { // Added captchaAt
         query.caseNumber,
         query.filingYear,
         JSON.stringify(response),
-        captchaAttempt // Log the captcha attempt
+        captchaAttempt
     ], function(err) {
         if (err) {
             console.error('Error inserting into database:', err.message);
@@ -106,6 +112,13 @@ const MOCK_CASES = {
 };
 
 // --- SIMULATED WEB SCRAPING LOGIC ---
+/**
+ * Simulates web scraping by looking up data in the MOCK_CASES object.
+ * It now returns a random case for the selected case type,
+ * regardless of the case number or year entered.
+ * @param {object} query The user's search query.
+ * @returns {Promise<object|null>} A promise that resolves to the mock data or null if not found.
+ */
 async function scrapeCaseData(query) {
     const { caseType } = query;
     const casesForType = MOCK_CASES[caseType];
@@ -129,5 +142,62 @@ async function scrapeCaseData(query) {
 
 // Endpoint to provide the current CAPTCHA code to the frontend
 app.get('/api/captcha', (req, res) => {
-    // Generate a new CAPTCHA on request for refresh
-        
+    // Generate a new CAPTCHA on request for refresh functionality
+    const newCaptchaCode = generateNewCaptcha();
+    res.status(200).json({ captcha_code: newCaptchaCode });
+});
+
+app.post('/api/case', async (req, res) => {
+    console.log('Received API request:', req.body);
+    const { caseType, caseNumber, filingYear, captchaInput } = req.body; // Get captchaInput
+
+    // --- CAPTCHA VALIDATION ---
+    if (!captchaInput || captchaInput !== currentCaptcha.code) {
+        const errorResponse = { message: 'CAPTCHA incorrect. Please try again.' };
+        logQueryToDb(req.body, errorResponse, captchaInput); // Log the failed attempt
+        generateNewCaptcha(); // Generate new CAPTCHA on failure
+        return res.status(400).json({ success: false, message: 'CAPTCHA incorrect. Please try again.', captcha_code: currentCaptcha.code });
+    }
+
+    // If CAPTCHA is correct, proceed with simulated scraping
+    const caseData = await scrapeCaseData({ caseType, caseNumber, filingYear });
+
+    if (caseData) {
+        logQueryToDb(req.body, { ...caseData, captcha_attempt: captchaInput }); // Log successful attempt
+        generateNewCaptcha(); // Generate new CAPTCHA on success
+        res.status(200).json({ success: true, data: caseData, captcha_code: currentCaptcha.code });
+    } else {
+        const errorResponse = { message: 'No case found for the given details.' };
+        logQueryToDb(req.body, { ...errorResponse, captcha_attempt: captchaInput }); // Log failed attempt
+        generateNewCaptcha(); // Generate new CAPTCHA on failure
+        res.status(404).json({ success: false, message: 'No case found with these details.', captcha_code: currentCaptcha.code });
+    }
+});
+
+// Endpoint to retrieve the query log from the SQLite database
+app.get('/api/log', (req, res) => {
+    db.all("SELECT * FROM queries_log ORDER BY timestamp DESC", [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching logs from database:', err.message);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        // Map rows to match the expected frontend format (query, response)
+        const logs = rows.map(row => ({
+            timestamp: row.timestamp,
+            query: {
+                caseType: row.case_type,
+                caseNumber: row.case_number,
+                filingYear: row.filing_year
+            },
+            response: row.response_data,
+            captcha_attempt: row.captcha_attempt // Include captcha attempt in log
+        }));
+        res.status(200).json(logs);
+    });
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Full-stack server running at http://localhost:${port}`);
+});
